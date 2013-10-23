@@ -76,7 +76,23 @@ CFloatImage WarpSphericalField(CShape srcSh, CShape dstSh, float f,
 			// r, and project the point to the z=1 plane at
 			// (xt/zt,yt/zt,1), then distort with radial distortion
 			// coefficients k1 and k2
-						// END TODO
+
+			// Compute Euclidean coordinates
+			p[0] = sin(xf) * cos(yf);
+			p[1] = sin(yf);
+			p[2] = cos(xf) * cos(yf);
+			// Rotate
+			p = r * p;
+			// Project
+			p[0] /= p[2];
+			p[1] /= p[2];
+			p[2] = 1;
+			// Distort
+			float radius2 = p[0]*p[0] + p[1]*p[1];
+			xt = p[0] * (1 + k1*radius2 + k2*radius2*radius2);
+			yt = p[1] * (1 + k1*radius2 + k2*radius2*radius2);
+
+			// END TODO
 
 			// Convert back to regular pixel coordinates and store
 			float xn = 0.5f*srcSh.width  + xt*f;
