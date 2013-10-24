@@ -81,8 +81,8 @@ CTransform3x3 ComputeHomography(const FeatureSet &f1, const FeatureSet &f2,
 	// minSvIdx: smallest sv index
 	double minSv = sv[0];
 	int minSvIdx = 0;
-	for (int i = 1; i < 9; i++) {
-		if (sv[i] < minSv) {
+	for (int i = 0; i < (int)sv.size(); i++) {
+		if (sv[i] < minSv && sv[i] > 0) {
 			minSv = sv[i];
 			minSvIdx = i;
 		}
@@ -140,8 +140,87 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
     // Your homography handling code should call ComputeHomography.
     // This function should also call countInliers and, at the end,
     // leastSquaresFit.
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
+	
+	// Generate a random seed
+	// srand(unsigned int(time(NULL)));
 
+	// Save maximum inliers
+	// maxInlierCnt: maximum number of inliers
+	// maxInliers: inlier feature ids of f1
+	int maxInlierCnt = 0;
+	vector<int> maxInliers;
+
+	for (int i = 0; i < nRANSAC; i++) {
+		
+		// Number of features
+		int numF = matches.size();
+
+		// Number of samples
+		int numS;
+		switch (m) {
+			case eTranslate:
+				numS = 1;
+				break;
+			case eHomography:
+				numS = 4;
+				break;
+		}
+
+		vector<FeatureMatch> randMatches;
+		int cnt = 0;
+		while (cnt < numS) {
+			// Randomly pick a pair from the feature list that isn't in the list
+			int rdn = rand() % numF;
+			FeatureMatch curFeature = matches[rdn];
+			// Check if this match is already selected
+			bool selected = false;
+			for (int j = 0; j < (int)randMatches.size(); j++) {
+				if (randMatches[j].id1 == curFeature.id1 && randMatches[j].id2 == curFeature.id2) {
+					selected = true;
+				}
+			}
+			// If not, push it to the sample space
+			if (!selected) {
+				randMatches.push_back(curFeature);
+				cnt++;
+			}
+		}
+		// Get the transform
+		CTransform3x3 M;
+		// Translation
+		if (numS ==1) {
+			FeatureMatch match = randMatches[0];
+			M[0][0] = 1;
+			M[0][1] = 0;
+			M[0][2] = f2[match.id2].x - f1[match.id1].x;
+			M[1][0] = 0;
+			M[1][1] = 1;
+			M[1][2] = f2[match.id2].y - f1[match.id2].y;
+			M[2][0] = 0;
+			M[2][1] = 0;
+			M[2][2] = 1;
+		}
+		// Homography
+		else {
+			M = ComputeHomography(f1, f2, randMatches);
+		}
+		// Count inliers matching this homography
+		vector<int> curInliers;
+		int numInliers = countInliers(f1, f2, matches, m, M, RANSACthresh, curInliers);
+		// Update maximum inliers
+		if (numInliers > maxInlierCnt) {
+			maxInlierCnt = numInliers;
+			maxInliers.clear();
+			for (int k = 0; k < numInliers; k++) {
+				maxInliers.push_back(curInliers[k]);
+			}
+		}
+	}
+	// Call leastSquaresFit
+	if (leastSquaresFit(f1, f2, matches, m, maxInliers, M) != 0) {
+		cout << "ERROR: leastSquaresFit exits abnormally!" << endl;
+		return -1;
+	}
     // END TODO
 
     return 0;
