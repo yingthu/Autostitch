@@ -38,7 +38,30 @@ CTransform3x3 ComputeHomography(const FeatureSet &f1, const FeatureSet &f2,
         // BEGIN TODO
         // fill in the matrix A in this loop.
         // To access an element of A, use parentheses, e.g. A(0,0)
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
+
+		// Note that A is a (2n x 9) matrix
+		// We can easily fill in A according to the lecture
+		// Row 2i
+		A(2*i, 0) = a.x;
+		A(2*i, 1) = a.y;
+		A(2*i, 2) = 1;
+		A(2*i, 3) = 0;
+		A(2*i, 4) = 0;
+		A(2*i, 5) = 0;
+		A(2*i, 6) = -b.x * a.x;
+		A(2*i, 7) = -b.x * a.y;
+		A(2*i, 8) = -b.x;
+
+		// Row 2i+1
+		A(2*i+1, 0) = 0;
+		A(2*i+1, 1) = 0;
+		A(2*i+1, 2) = 0;
+		A(2*i+1, 3) = a.x;
+		A(2*i+1, 4) = a.y;
+		A(2*i+1, 5) = 1;
+		A(2*i+1, 6) = -b.y * a.x;
+		A(2*i+1, 7) = -b.y * a.y;
+		A(2*i+1, 8) = -b.y;
 
         // END TODO
     }
@@ -52,7 +75,29 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
     // BEGIN TODO
     // fill the homography H with the appropriate elements of the SVD
     // To extract, for instance, the V matrix, use svd.matrixV()
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
+
+	// Find the smallest sv first
+	// minSv: smallest sv value
+	// minSvIdx: smallest sv index
+	double minSv = sv[0];
+	int minSvIdx = 0;
+	for (int i = 1; i < 9; i++) {
+		if (sv[i] < minSv) {
+			minSv = sv[i];
+			minSvIdx = i;
+		}
+	}
+	// Rank(A) = 8 => H = a v_n  (a is a constant)
+	// v_n corresponds to the smallest sv
+	H[0][0] = Vt(minSvIdx,0) / Vt(minSvIdx,8);
+	H[0][1] = Vt(minSvIdx,1) / Vt(minSvIdx,8);
+	H[0][2] = Vt(minSvIdx,2) / Vt(minSvIdx,8);
+	H[1][0] = Vt(minSvIdx,3) / Vt(minSvIdx,8);
+	H[1][1] = Vt(minSvIdx,4) / Vt(minSvIdx,8);
+	H[1][2] = Vt(minSvIdx,5) / Vt(minSvIdx,8);
+	H[2][0] = Vt(minSvIdx,6) / Vt(minSvIdx,8);
+	H[2][1] = Vt(minSvIdx,7) / Vt(minSvIdx,8);
+	H[2][2] = Vt(minSvIdx,8) / Vt(minSvIdx,8);
 
     // END TODO
 
