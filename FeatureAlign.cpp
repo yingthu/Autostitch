@@ -16,6 +16,7 @@
 #include "SVD.h"
 
 #include <math.h>
+#include <time.h>
 #include <iostream>
 
 CTransform3x3 ComputeHomography(const FeatureSet &f1, const FeatureSet &f2,
@@ -142,7 +143,7 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
     // leastSquaresFit.
 	
 	// Generate a random seed
-	// srand(unsigned int(time(NULL)));
+	srand(unsigned int(time(NULL)));
 
 	// Save maximum inliers
 	// maxInlierCnt: maximum number of inliers
@@ -167,6 +168,7 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 		}
 
 		vector<FeatureMatch> randMatches;
+		randMatches.clear();
 		int cnt = 0;
 		while (cnt < numS) {
 			// Randomly pick a pair from the feature list that isn't in the list
@@ -185,6 +187,20 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 				cnt++;
 			}
 		}
+		/*vector<FeatureMatch> randMatches;
+		randMatches.clear();
+		for (int cnt = 0; cnt < numS; cnt++) {
+			bool isUnique;
+			int rnd;
+			do {
+				isUnique = true;
+				rnd = rand() % numF;
+				for (int j = 0; j < cnt; j++) {
+					isUnique = isUnique && (matches[rnd].id1 != randMatches[j].id1 || matches[rnd].id2 != randMatches[j].id2);
+				}
+			} while (!isUnique);
+			randMatches.push_back(matches[rnd]);
+		}*/
 		// Get the transform
 		CTransform3x3 H;
 		// Translation
@@ -201,7 +217,7 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 			H[2][2] = 1;
 		}
 		// Homography
-		else {
+		else if (numS == 4) {
 			H = ComputeHomography(f1, f2, randMatches);
 		}
 		// Count inliers matching this homography
@@ -212,13 +228,23 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 		if (numInliers > maxInlierCnt) {
 			maxInlierCnt = numInliers;
 			maxInliers.clear();
-			for (int k = 0; k < numInliers; k++) {
+			for (int k = 0; k < maxInlierCnt; k++) {
 				maxInliers.push_back(curInliers[k]);
 			}
 		}
 	}
 	cout << "num_inliers: " << maxInlierCnt << " / " << matches.size() << endl;
 	
+	//////////////////////////DEBUG//////////////////////////
+	if (maxInlierCnt < 10) {
+		for (int ii = 0; ii < maxInlierCnt; ii++) {
+			cout << ii << endl;
+			cout << matches[maxInliers[ii]].id1 << " " << matches[maxInliers[ii]].id2 << endl;
+			cout << f1[matches[maxInliers[ii]].id1].x << " " << f1[matches[maxInliers[ii]].id1].y << endl;
+			cout << f2[matches[maxInliers[ii]].id2].x << " " << f2[matches[maxInliers[ii]].id2].y << endl;
+		}
+	}
+
 	// Call leastSquaresFit
 	leastSquaresFit(f1, f2, matches, m, maxInliers, M);
 	
@@ -352,6 +378,7 @@ int leastSquaresFit(const FeatureSet &f1, const FeatureSet &f2,
 
 			// Put the matches specified by inliers into a new FeatureMatch vector
 			vector<FeatureMatch> inlierMatches;
+			inlierMatches.clear();
 			for (int i = 0; i < (int)inliers.size(); i++) {
 				FeatureMatch m = matches[inliers[i]];
 				inlierMatches.push_back(m);
