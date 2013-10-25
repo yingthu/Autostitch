@@ -88,6 +88,7 @@ CTransform3x3 ComputeHomography(const FeatureSet &f1, const FeatureSet &f2,
 			minSvIdx = i;
 		}
 	}
+	//minSvIdx = 8;
 	// Rank(A) = 8 => H = a v_n  (a is a constant)
 	// v_n corresponds to the smallest sv
 	H[0][0] = Vt(minSvIdx,0) / Vt(minSvIdx,8);
@@ -100,7 +101,15 @@ CTransform3x3 ComputeHomography(const FeatureSet &f1, const FeatureSet &f2,
 	H[2][1] = Vt(minSvIdx,7) / Vt(minSvIdx,8);
 	H[2][2] = Vt(minSvIdx,8) / Vt(minSvIdx,8);
 
-    // END TODO
+	/*for (int a = 0; a < 9; a++)
+	{	
+		for (int b = 0; b < 9; b++)
+		{
+			cout << Vt(a,b) << " ";
+		}
+		cout << endl;
+	}*/
+	// END TODO
 
     return H;
 }
@@ -143,7 +152,7 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
     // leastSquaresFit.
 	
 	// Generate a random seed
-	srand(unsigned int(time(NULL)));
+	//srand(unsigned int(time(NULL)));
 
 	// Save maximum inliers
 	// maxInlierCnt: maximum number of inliers
@@ -170,12 +179,14 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 	for (int i = 0; i < nRANSAC; i++) {
 		// Random samples
 		vector<FeatureMatch> randMatches;
+		//vector<int> randMatches;
 		randMatches.clear();
 		
 		int cnt = 0;
 		while (cnt < numS) {
 			// Randomly pick a pair from the feature list that isn't in the list
 			int rnd = rand() % numF;
+			//cout << i << " " << rnd << endl;
 			FeatureMatch curFeature = matches[rnd];
 			// Check if this match is already selected
 			bool selected = false;
@@ -190,7 +201,11 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 				cnt++;
 			}
 		}
-		
+		/*randMatches.push_back(0);
+		randMatches.push_back(1);
+		randMatches.push_back(2);
+		randMatches.push_back(3);*/
+
 		// Get the transform
 		CTransform3x3 H;
 		// Translation
@@ -210,7 +225,8 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 		else if (numS == 4) {
 			H = ComputeHomography(f1, f2, randMatches);
 		}
-
+		
+		//leastSquaresFit(f1, f2, matches, m, randMatches, H);
 		// Count inliers matching this homography
 		vector<int> curInliers;
 		int numInliers = countInliers(f1, f2, matches, m, H, RANSACthresh, curInliers);
@@ -289,10 +305,10 @@ int countInliers(const FeatureSet &f1, const FeatureSet &f2,
 		p[1] = a.y;
 		p[2] = 1;
 		CVector3 pt = M * p;
-		
+		//cout << pt[2] << endl;
 		// Transformed f1[m.id1]
-		double xt = pt[0];
-		double yt = pt[1];
+		double xt = pt[0] / pt[2];
+		double yt = pt[1] / pt[2];
 
 		// Compute Euclidean distance from xt,yt to b.x,b.y
 		// and check if within RANSACthresh
