@@ -151,29 +151,32 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 	int maxInlierCnt = 0;
 	vector<int> maxInliers;
 
-	for (int i = 0; i < nRANSAC; i++) {
-		
-		// Number of features
-		int numF = matches.size();
+	// Number of features
+	int numF = matches.size();
 
-		// Number of samples
-		int numS;
-		switch (m) {
-			case eTranslate:
-				numS = 1;
-				break;
-			case eHomography:
-				numS = 4;
-				break;
+	// Number of samples
+	int numS;
+	switch (m) {
+		case eTranslate: {
+			numS = 1;
+			break;
 		}
+		case eHomography: {
+			numS = 4;
+			break;
+		}
+	}
 
+	for (int i = 0; i < nRANSAC; i++) {
+		// Random samples
 		vector<FeatureMatch> randMatches;
 		randMatches.clear();
+		
 		int cnt = 0;
 		while (cnt < numS) {
 			// Randomly pick a pair from the feature list that isn't in the list
-			int rdn = rand() % numF;
-			FeatureMatch curFeature = matches[rdn];
+			int rnd = rand() % numF;
+			FeatureMatch curFeature = matches[rnd];
 			// Check if this match is already selected
 			bool selected = false;
 			for (int j = 0; j < (int)randMatches.size(); j++) {
@@ -187,31 +190,18 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 				cnt++;
 			}
 		}
-		/*vector<FeatureMatch> randMatches;
-		randMatches.clear();
-		for (int cnt = 0; cnt < numS; cnt++) {
-			bool isUnique;
-			int rnd;
-			do {
-				isUnique = true;
-				rnd = rand() % numF;
-				for (int j = 0; j < cnt; j++) {
-					isUnique = isUnique && (matches[rnd].id1 != randMatches[j].id1 || matches[rnd].id2 != randMatches[j].id2);
-				}
-			} while (!isUnique);
-			randMatches.push_back(matches[rnd]);
-		}*/
+		
 		// Get the transform
 		CTransform3x3 H;
 		// Translation
-		if (numS ==1) {
+		if (numS == 1) {
 			FeatureMatch match = randMatches[0];
 			H[0][0] = 1;
 			H[0][1] = 0;
 			H[0][2] = f2[match.id2].x - f1[match.id1].x;
 			H[1][0] = 0;
 			H[1][1] = 1;
-			H[1][2] = f2[match.id2].y - f1[match.id2].y;
+			H[1][2] = f2[match.id2].y - f1[match.id1].y;
 			H[2][0] = 0;
 			H[2][1] = 0;
 			H[2][2] = 1;
@@ -220,10 +210,11 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 		else if (numS == 4) {
 			H = ComputeHomography(f1, f2, randMatches);
 		}
+
 		// Count inliers matching this homography
 		vector<int> curInliers;
 		int numInliers = countInliers(f1, f2, matches, m, H, RANSACthresh, curInliers);
-		
+
 		// Update maximum inliers
 		if (numInliers > maxInlierCnt) {
 			maxInlierCnt = numInliers;
@@ -236,14 +227,14 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 	cout << "num_inliers: " << maxInlierCnt << " / " << matches.size() << endl;
 	
 	//////////////////////////DEBUG//////////////////////////
-	if (maxInlierCnt < 10) {
+	/*if (maxInlierCnt < 10) {
 		for (int ii = 0; ii < maxInlierCnt; ii++) {
 			cout << ii << endl;
 			cout << matches[maxInliers[ii]].id1 << " " << matches[maxInliers[ii]].id2 << endl;
 			cout << f1[matches[maxInliers[ii]].id1].x << " " << f1[matches[maxInliers[ii]].id1].y << endl;
 			cout << f2[matches[maxInliers[ii]].id2].x << " " << f2[matches[maxInliers[ii]].id2].y << endl;
 		}
-	}
+	}*/
 
 	// Call leastSquaresFit
 	leastSquaresFit(f1, f2, matches, m, maxInliers, M);
