@@ -81,7 +81,7 @@ CTransform3x3 ComputeHomography(const FeatureSet &f1, const FeatureSet &f2,
 	// minSvIdx: smallest sv index
 	double minSv = sv[0];
 	int minSvIdx = 0;
-	for (int i = 0; i < (int)sv.size(); i++) {
+	for (int i = 1; i < (int)sv.size(); i++) {
 		if (sv[i] < minSv && sv[i] > 0) {
 			minSv = sv[i];
 			minSvIdx = i;
@@ -146,7 +146,7 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 
 	// Save maximum inliers
 	// maxInlierCnt: maximum number of inliers
-	// maxInliers: inlier feature ids of f1
+	// maxInliers: inlier IDs
 	int maxInlierCnt = 0;
 	vector<int> maxInliers;
 
@@ -186,27 +186,28 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 			}
 		}
 		// Get the transform
-		CTransform3x3 M;
+		CTransform3x3 H;
 		// Translation
 		if (numS ==1) {
 			FeatureMatch match = randMatches[0];
-			M[0][0] = 1;
-			M[0][1] = 0;
-			M[0][2] = f2[match.id2].x - f1[match.id1].x;
-			M[1][0] = 0;
-			M[1][1] = 1;
-			M[1][2] = f2[match.id2].y - f1[match.id2].y;
-			M[2][0] = 0;
-			M[2][1] = 0;
-			M[2][2] = 1;
+			H[0][0] = 1;
+			H[0][1] = 0;
+			H[0][2] = f2[match.id2].x - f1[match.id1].x;
+			H[1][0] = 0;
+			H[1][1] = 1;
+			H[1][2] = f2[match.id2].y - f1[match.id2].y;
+			H[2][0] = 0;
+			H[2][1] = 0;
+			H[2][2] = 1;
 		}
 		// Homography
 		else {
-			M = ComputeHomography(f1, f2, randMatches);
+			H = ComputeHomography(f1, f2, randMatches);
 		}
 		// Count inliers matching this homography
 		vector<int> curInliers;
-		int numInliers = countInliers(f1, f2, matches, m, M, RANSACthresh, curInliers);
+		int numInliers = countInliers(f1, f2, matches, m, H, RANSACthresh, curInliers);
+		
 		// Update maximum inliers
 		if (numInliers > maxInlierCnt) {
 			maxInlierCnt = numInliers;
@@ -216,11 +217,11 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 			}
 		}
 	}
+	cout << "num_inliers: " << maxInlierCnt << " / " << matches.size() << endl;
+	
 	// Call leastSquaresFit
-	if (leastSquaresFit(f1, f2, matches, m, maxInliers, M) != 0) {
-		cout << "ERROR: leastSquaresFit exits abnormally!" << endl;
-		return -1;
-	}
+	leastSquaresFit(f1, f2, matches, m, maxInliers, M);
+	
     // END TODO
 
     return 0;
@@ -259,7 +260,30 @@ int countInliers(const FeatureSet &f1, const FeatureSet &f2,
         // is within RANSACthresh of its match in f2
         //
         // if so, append i to inliers
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
+
+		// Get the features
+		const FeatureMatch &m = matches[i];
+		const Feature &a = f1[m.id1];
+		const Feature &b = f2[m.id2];
+
+		// Transform f1[m.id1] by M
+		CVector3 p;
+		p[0] = a.x;
+		p[1] = a.y;
+		p[2] = 1;
+		CVector3 pt = M * p;
+		
+		// Transformed f1[m.id1]
+		double xt = pt[0];
+		double yt = pt[1];
+
+		// Compute Euclidean distance from xt,yt to b.x,b.y
+		// and check if within RANSACthresh
+		double distance = sqrt((b.x-xt)*(b.x-xt) + (b.y-yt)*(b.y-yt));
+		if (distance <= RANSACthresh) {
+			// Append i to inliers
+			inliers.push_back(i);
+		}
 
         // END TODO
     }
@@ -300,7 +324,13 @@ int leastSquaresFit(const FeatureSet &f1, const FeatureSet &f2,
 			    // BEGIN TODO
 			    // use this loop to compute the average translation vector
 			    // over all inliers
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
+				FeatureMatch m = matches[inliers[i]];
+				Feature a = f1[m.id1];
+				Feature b = f2[m.id2];
+
+				// Sum the differences
+				u += b.x - a.x;
+				v += b.y - a.y;
 
                 // END TODO
             }
@@ -319,7 +349,16 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
             // BEGIN TODO
 		    // Compute a homography M using all inliers.
 		    // This should call ComputeHomography.
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
+
+			// Put the matches specified by inliers into a new FeatureMatch vector
+			vector<FeatureMatch> inlierMatches;
+			for (int i = 0; i < (int)inliers.size(); i++) {
+				FeatureMatch m = matches[inliers[i]];
+				inlierMatches.push_back(m);
+			}
+
+			// Compute the homography using all inliers
+			M = ComputeHomography(f1, f2, inlierMatches);
 
             // END TODO
         
