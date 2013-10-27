@@ -27,6 +27,8 @@
 #include "BlendImages.h"
 #include <float.h>
 #include <math.h>
+#include <iostream>
+using namespace std;
 
 #define MAX(x,y) (((x) < (y)) ? (y) : (x))
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
@@ -46,8 +48,19 @@ void ImageBoundingBox(CImage &image, CTransform3x3 &M,
     // This is a useful helper function that you might choose to implement
     // takes an image, and a transform, and computes the bounding box of the
     // transformed image.
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
-
+	CShape sh=image.Shape();
+    int width=sh.width;
+    int height=sh.height;
+	CVector3 p1,p2,p3,p4;
+	p1[0]=0;p1[1]=0;p1[2]=1;
+	p2[0]=0;p2[1]=height;p2[2]=1;
+	p3[0]=width;p3[1]=0;p3[2]=1;
+	p4[0]=width;p4[1]=height;p4[2]=1;
+	p1=M*p1;p2=M*p2;p3=M*p3;p4=M*p4;
+	min_x=iround(MIN(p1[0]/p1[2],p2[0]/p2[2]));
+	max_x=iround(MAX(p3[0]/p3[2],p4[0]/p4[2]));
+	min_y=iround(MIN(p1[1]/p1[2],p3[1]/p3[2]));
+	max_y=iround(MAX(p2[1]/p2[2],p4[1]/p4[2]));
 }
 
 
@@ -56,7 +69,7 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
 *	INPUT:
 *		img: a new image to be added to acc
 *		acc: portion of the accumulated image where img is to be added
-*      M: the transformation mapping the input image 'img' into the output panorama 'acc'
+*       M: the transformation mapping the input image 'img' into the output panorama 'acc'
 *		blendWidth: width of the blending function (horizontal hat function;
 *	    try other blending functions for extra credit)
 *	OUTPUT:
@@ -68,7 +81,45 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 {
     // BEGIN TODO
     // Fill in this routine
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
+	CShape sh=img.Shape();
+    int width=sh.width;
+    int height=sh.height;
+	CShape shacc=acc.Shape();
+    int widthacc=shacc.width;
+    int heightacc=shacc.height;
+	
+	int min_x,min_y,max_x,max_y;
+	ImageBoundingBox(img,M,min_x,min_y,max_x,max_y);
+	int middle_x=(max_x+min_x)/2;
+	
+	CVector3 p;
+	int newx,newy;
+	int weight;
+	for (int ii=0;ii<width;ii++)
+	{
+        for (int jj=0;jj<height;jj++)
+		{
+		    p[0]=ii;p[1]=jj;p[2]=1;
+			p=M*p;
+			newx=iround(p[0]/p[2]);newy=iround(p[1]/p[2]);
+			if ((newx>=0)&&(newx<widthacc)&&(newy>=0)&&(newy<heightacc))
+			{
+				weight=1;
+				if ((newx>min_x)&&(newx<(min_x+blendWidth)))
+					weight=(newx-min_x)/blendWidth;
+				if ((newx<max_x)&&(newx>(max_x-blendWidth)))
+					weight=(max_x-newx)/blendWidth;
+				if ((img.Pixel(ii,jj,0)==0)&&(img.Pixel(ii,jj,0)==0)&&(img.Pixel(ii,jj,0)==0))
+					weight=0;
+				acc.Pixel(newx,newy,0)+=(img.Pixel(ii,jj,0)*weight);
+				acc.Pixel(newx,newy,1)+=(img.Pixel(ii,jj,1)*weight);
+				acc.Pixel(newx,newy,2)+=(img.Pixel(ii,jj,2)*weight);
+				acc.Pixel(newx,newy,3)+=weight;
+			}
+		}
+	}
+	
+printf("AccumulateBlend\n"); 
 
     // END TODO
 }
@@ -88,6 +139,27 @@ static void NormalizeBlend(CFloatImage& acc, CByteImage& img)
 {
     // BEGIN TODO
     // fill in this routine..
+	CShape shacc=acc.Shape();
+    int widthacc=shacc.width;
+    int heightacc=shacc.height;
+	for (int ii=0;ii<widthacc;ii++)
+	{
+        for (int jj=0;jj<heightacc;jj++)
+		{
+			if (acc.Pixel(ii,jj,3)>0)
+			{
+				img.Pixel(ii,jj,0)=(int)(acc.Pixel(ii,jj,0)/acc.Pixel(ii,jj,3));
+				img.Pixel(ii,jj,1)=(int)(acc.Pixel(ii,jj,1)/acc.Pixel(ii,jj,3));
+				img.Pixel(ii,jj,2)=(int)(acc.Pixel(ii,jj,2)/acc.Pixel(ii,jj,3));
+			}
+			else
+			{
+				img.Pixel(ii,jj,0)=0;
+				img.Pixel(ii,jj,1)=0;
+				img.Pixel(ii,jj,2)=0;
+			}
+		}
+	}
 printf("TODO: %s:%d\n", __FILE__, __LINE__); 
 
     // END TODO
@@ -127,20 +199,23 @@ CByteImage BlendImages(CImagePositionV& ipv, float blendWidth)
     float min_x = FLT_MAX, min_y = FLT_MAX;
     float max_x = 0, max_y = 0;
     int i;
+	int tmpmin_x,tmpmin_y,tmpmax_x,tmpmax_y;
     for (i = 0; i < n; i++)
     {
         CTransform3x3 &T = ipv[i].position;
 
         // BEGIN TODO
         // add some code here to update min_x, ..., max_y
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
-
-        // END TODO
+		ImageBoundingBox(img0,T,tmpmin_x,tmpmin_y,tmpmax_x,tmpmax_y);
+		min_x=MIN(tmpmin_x,min_x);
+		min_y=MIN(tmpmin_y,min_y);
+		max_x=MAX(tmpmax_x,max_x);
+		max_y=MAX(tmpmax_y,max_y);
+		// END TODO
     }
 
     // Create a floating point accumulation image
-    CShape mShape((int)(ceil(max_x) - floor(min_x)),
-        (int)(ceil(max_y) - floor(min_y)), nBands + 1);
+    CShape mShape((int)(ceil(max_x) - floor(min_x)), (int)(ceil(max_y) - floor(min_y)), nBands + 1);
     CFloatImage accumulator(mShape);
     accumulator.ClearPixels();
 
@@ -148,7 +223,8 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
     double y_init, y_final;
 
     // Add in all of the images
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < n; i++) 
+	{
         // Compute the sub-image involved
         CTransform3x3 &M = ipv[i].position;
         CTransform3x3 M_t = CTransform3x3::Translation(-min_x, -min_y) * M;
@@ -157,7 +233,8 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
         // Perform the accumulation
         AccumulateBlend(img, accumulator, M_t, blendWidth);
 
-        if (i == 0) {
+        if (i == 0) 
+		{
             CVector3 p;
             p[0] = 0.5 * width;
             p[1] = 0.0;
@@ -166,7 +243,8 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
             p = M_t * p;
             x_init = p[0];
             y_init = p[1];
-        } else if (i == n - 1) {
+        } else if (i == n - 1) 
+		{
             CVector3 p;
             p[0] = 0.5 * width;
             p[1] = 0.0;
@@ -179,8 +257,7 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
     }
 
     // Normalize the results
-    mShape = CShape((int)(ceil(max_x) - floor(min_x)),
-        (int)(ceil(max_y) - floor(min_y)), nBands);
+    mShape = CShape((int)(ceil(max_x) - floor(min_x)), (int)(ceil(max_y) - floor(min_y)), nBands);
 
     CByteImage compImage(mShape);
     NormalizeBlend(accumulator, compImage);
@@ -190,9 +267,11 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
 
     // Allocate the final image shape
     int outputWidth = 0;
-    if (is360) {
+    if (is360) 
+	{
         outputWidth = mShape.width - width;
-    } else {
+    } else 
+	{
         outputWidth = mShape.width;
     }
 
@@ -207,7 +286,16 @@ printf("TODO: %s:%d\n", __FILE__, __LINE__);
     // fill in appropriate entries in A to trim the left edge and
     // to take out the vertical drift if this is a 360 panorama
     // (i.e. is360 is true)
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
+	double k;
+	if (is360)
+	{
+		CTransform3x3 AA = CTransform3x3();;
+		k=(y_final-y_init)/(x_final-x_init);
+		AA[0][0]=1;AA[0][1]=0;AA[0][2]=0;
+		AA[1][0]=k;AA[1][1]=1;AA[1][2]=0;
+		AA[2][0]=0;AA[2][1]=0;AA[2][2]=1;
+		A = CTransform3x3::Translation(x_init, y_init) * AA;
+	}
 
     // END TODO
 
