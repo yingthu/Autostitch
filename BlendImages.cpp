@@ -94,7 +94,7 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 	
 	CVector3 p;
 	int newx,newy;
-	int weight;
+	double weight;
 	for (int ii=0;ii<width;ii++)
 	{
         for (int jj=0;jj<height;jj++)
