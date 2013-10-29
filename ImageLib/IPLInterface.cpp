@@ -7,7 +7,7 @@
 //  IPLInterface.h      full description of this functionality
 //  Image.h             image class definition
 //
-// Copyright © Richard Szeliski, 2001.  See Copyright.h for more details
+// Copyright ?Richard Szeliski, 2001.  See Copyright.h for more details
 //
 ///////////////////////////////////////////////////////////////////////////
 

@@ -3,7 +3,7 @@
 // NAME
 //  ImageLib.h -- header file for the simple image library
 //
-// Copyright © Richard Szeliski, 2001.  See Copyright.h for more details
+// Copyright ?Richard Szeliski, 2001.  See Copyright.h for more details
 //
 ///////////////////////////////////////////////////////////////////////////
 

@@ -13,7 +13,7 @@
 // SEE ALSO
 //  FileIO.h            longer description
 //
-// Copyright © Richard Szeliski, 2001.  See Copyright.h for more details
+// Copyright ?Richard Szeliski, 2001.  See Copyright.h for more details
 //
 ///////////////////////////////////////////////////////////////////////////
 

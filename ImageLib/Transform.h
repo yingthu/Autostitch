@@ -13,7 +13,7 @@
 // SEE ALSO
 //  Transform.cpp       implementation
 //
-// Copyright © Richard Szeliski, 2001.  See Copyright.h for more details
+// Copyright ?Richard Szeliski, 2001.  See Copyright.h for more details
 // (modified for CSE576 Spring 2005)
 //
 ///////////////////////////////////////////////////////////////////////////

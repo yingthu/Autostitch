@@ -6,7 +6,7 @@
 // SEE ALSO
 //  Image.h             definition and explanation of these classes
 //
-// Copyright © Richard Szeliski, 2001.  See Copyright.h for more details
+// Copyright ?Richard Szeliski, 2001.  See Copyright.h for more details
 //
 ///////////////////////////////////////////////////////////////////////////
 

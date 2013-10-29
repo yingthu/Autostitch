@@ -12,7 +12,7 @@
 // SEE ALSO
 //  Convolve.h          longer description of these routines
 //
-// Copyright © Richard Szeliski, 2001.  See Copyright.h for more details
+// Copyright ?Richard Szeliski, 2001.  See Copyright.h for more details
 //
 ///////////////////////////////////////////////////////////////////////////
 

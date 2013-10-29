@@ -289,12 +289,24 @@ CByteImage BlendImages(CImagePositionV& ipv, float blendWidth)
 	double k;
 	if (is360)
 	{
-		CTransform3x3 AA = CTransform3x3();;
+		/*CTransform3x3 AA = CTransform3x3();;
 		k=(y_final-y_init)/(x_final-x_init);
 		AA[0][0]=1;AA[0][1]=0;AA[0][2]=0;
 		AA[1][0]=k;AA[1][1]=1;AA[1][2]=0;
 		AA[2][0]=0;AA[2][1]=0;AA[2][2]=1;
-		A = CTransform3x3::Translation(x_init, y_init) * AA;
+		A = CTransform3x3::Translation(-x_init, -y_init) * AA;
+		*/
+		A[0][0] = 1;
+        A[0][1] = 0;
+        A[0][2] = width/2; // x translation
+
+        A[1][0] = -ipv[n-1].position[1][2] / cShape.width; // delta y per unit x, TODO
+        A[1][1] = 1;
+        A[1][2] = 0; // y translation
+
+        A[2][0] = 0;
+        A[2][1] = 0;
+        A[2][2] = 1;
 	}
 
     // END TODO

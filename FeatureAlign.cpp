@@ -159,6 +159,7 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 	// maxInliers: inlier IDs
 	int maxInlierCnt = 0;
 	vector<int> maxInliers;
+	maxInliers.clear();
 
 	// Number of features
 	int numF = matches.size();
