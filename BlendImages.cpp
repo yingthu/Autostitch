@@ -81,6 +81,7 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 {
     // BEGIN TODO
     // Fill in this routine
+	// get shape of acc and img
 	CShape sh=img.Shape();
     int width=sh.width;
     int height=sh.height;
@@ -88,10 +89,13 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
     int widthacc=shacc.width;
     int heightacc=shacc.height;
 	
+	// get the bounding box of img in acc
 	int min_x,min_y,max_x,max_y;
 	ImageBoundingBox(img,M,min_x,min_y,max_x,max_y);
 	int middle_x=(max_x+min_x)/2;
 	
+	// add every pixel in img to acc, feather the region withing blendwidth to the bounding box,
+	// pure black pixels (caused by warping) are not added
 	CVector3 p;
 	int newx,newy;
 	double weight;
@@ -139,6 +143,7 @@ static void NormalizeBlend(CFloatImage& acc, CByteImage& img)
 {
     // BEGIN TODO
     // fill in this routine..
+	// divide the total weight for every pixel
 	CShape shacc=acc.Shape();
     int widthacc=shacc.width;
     int heightacc=shacc.height;
@@ -289,24 +294,18 @@ CByteImage BlendImages(CImagePositionV& ipv, float blendWidth)
 	double k;
 	if (is360)
 	{
-		/*CTransform3x3 AA = CTransform3x3();;
-		k=(y_final-y_init)/(x_final-x_init);
+		if (x_init>x_final)
+		{
+			int tmp=x_init;
+			x_init=x_final;
+			x_final=tmp;
+		}
+		CTransform3x3 AA = CTransform3x3();;
+		k=-(y_final-y_init)/(x_final-x_init);
 		AA[0][0]=1;AA[0][1]=0;AA[0][2]=0;
 		AA[1][0]=k;AA[1][1]=1;AA[1][2]=0;
 		AA[2][0]=0;AA[2][1]=0;AA[2][2]=1;
-		A = CTransform3x3::Translation(-x_init, -y_init) * AA;
-		*/
-		A[0][0] = 1;
-        A[0][1] = 0;
-        A[0][2] = width/2; // x translation
-
-        A[1][0] = -ipv[n-1].position[1][2] / cShape.width; // delta y per unit x, TODO
-        A[1][1] = 1;
-        A[1][2] = 0; // y translation
-
-        A[2][0] = 0;
-        A[2][1] = 0;
-        A[2][2] = 1;
+		A = CTransform3x3::Translation(x_init, -y_init) * AA;
 	}
 
     // END TODO
