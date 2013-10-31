@@ -241,7 +241,7 @@ int alignPair(const FeatureSet &f1, const FeatureSet &f2,
 			}
 		}
 	}
-	cout << "num_inliers: " << maxInlierCnt << " / " << matches.size() << endl;
+	printf("num_inliers: %d / %d\n", maxInlierCnt, matches.size());
 	
 	//////////////////////////DEBUG//////////////////////////
 	/*if (maxInlierCnt < 10) {

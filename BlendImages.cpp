@@ -97,15 +97,15 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 	// add every pixel in img to acc, feather the region withing blendwidth to the bounding box,
 	// pure black pixels (caused by warping) are not added
 	CVector3 p;
-	int newx,newy;
+	//int newx,newy;
 	double weight;
-	for (int ii=0;ii<width;ii++)
+	/*for (int ii=0;ii<width;ii++)
 	{
         for (int jj=0;jj<height;jj++)
 		{
 		    p[0]=ii;p[1]=jj;p[2]=1;
 			p=M*p;
-			newx=iround(p[0]/p[2]);newy=iround(p[1]/p[2]);
+			//newx=iround(p[0]/p[2]);newy=iround(p[1]/p[2]);
 			if ((newx>=0)&&(newx<widthacc)&&(newy>=0)&&(newy<heightacc))
 			{
 				weight=1;
@@ -121,9 +121,32 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 				acc.Pixel(newx,newy,3)+=weight;
 			}
 		}
-	}
+	}*/
+	double newx, newy;
+	for (int ii = 0; ii < widthacc; ii++)
+		for (int jj = 0; jj < heightacc; jj++)
+		{
+			p[0] = ii; p[1] = jj; p[2] = 1;
+			p = M.Inverse() * p;
+			newx = p[0] / p[2];
+			newy = p[1] / p[2];
+			if ((newx>=0)&&(newx<width)&&(newy>=0)&&(newy<height))
+			{
+				weight=1;
+				if ((ii>min_x)&&(ii<(min_x+blendWidth)))
+					weight=(ii-min_x)/blendWidth;
+				if ((ii<max_x)&&(ii>(max_x-blendWidth)))
+					weight=(max_x-ii)/blendWidth;
+				if ((img.Pixel(newx,newy,0)==0)&&(img.Pixel(newx,newy,1)==0)&&(img.Pixel(newx,newy,2)==0))
+					weight=0;
+				acc.Pixel(ii,jj,0)+=(img.PixelLerp(newx,newy,0)*weight);
+				acc.Pixel(ii,jj,1)+=(img.PixelLerp(newx,newy,1)*weight);
+				acc.Pixel(ii,jj,2)+=(img.PixelLerp(newx,newy,2)*weight);
+				acc.Pixel(ii,jj,3)+=weight;
+			}
+		}
 	
-printf("AccumulateBlend\n"); 
+	printf("AccumulateBlend\n"); 
 
     // END TODO
 }
@@ -165,7 +188,6 @@ static void NormalizeBlend(CFloatImage& acc, CByteImage& img)
 			}
 		}
 	}
-printf("TODO: %s:%d\n", __FILE__, __LINE__); 
 
     // END TODO
 }
@@ -227,6 +249,78 @@ CByteImage BlendImages(CImagePositionV& ipv, float blendWidth)
     double x_init, x_final;
     double y_init, y_final;
 
+	//--> Exposure Compensation
+	/*float* alphaR = new float[n];
+	float* alphaG = new float[n];
+	float* alphaB = new float[n];
+	alphaR[0] = 1; alphaG[0] = 1; alphaB[0] = 1;
+	int minX_prev, minY_prev, maxX_prev, maxY_prev;
+	int minX_curr, minY_curr, maxX_curr, maxY_curr;
+	// Computing correction coefficient alpha
+	for (i = 1; i < n; i++)
+	{
+		float sum_prev[3]; // rgb
+		float sum_curr[3]; // rgb
+		CTransform3x3 M_prev = CTransform3x3::Translation(-min_x,-min_y)*ipv[i-1].position;
+		CTransform3x3 M_curr = CTransform3x3::Translation(-min_x,-min_y)*ipv[i].position;
+		ImageBoundingBox(ipv[i-1].img,M_prev,minX_prev,minY_prev,maxX_prev,maxY_prev);
+		ImageBoundingBox(ipv[i].img,M_curr,minX_curr,minY_curr,maxX_curr,maxY_curr);
+		int OMinX = minX_curr > minX_prev ? MIN(maxX_prev,minX_curr) : MIN(minX_prev,maxX_curr);
+		int OMaxX = minX_curr > minX_prev ? MAX(maxX_prev,minX_curr) : MAX(minX_prev,maxX_curr);
+		int OMinY = MAX(minY_prev,minY_curr);
+		int OMaxY = MIN(maxY_prev,maxY_curr);
+		CVector3 p,p_prev,p_curr;
+		for (int m = OMinX; m <= OMaxX; m++)
+			for (int n = OMinY; n <= OMaxY; n++)
+			{
+				p[0] = m; p[1] = n; p[2] = 1;
+				p_prev = M_prev.Inverse() * p;
+				p_curr = M_curr.Inverse() * p;
+				for (int ch = 0; ch < 3; ch++)
+				{
+					sum_prev[ch] += (float)ipv[i-1].img.Pixel(p_prev[0]/p_prev[2],p_prev[1]/p_prev[2],ch) / 255.0;
+					sum_curr[ch] += (float)ipv[i].img.Pixel(p_curr[0]/p_curr[2],p_curr[1]/p_curr[2],ch) / 255.0;
+				}
+			}
+		alphaR[i] = sum_prev[0] / sum_curr[0];
+		alphaG[i] = sum_prev[1] / sum_curr[1];
+		alphaB[i] = sum_prev[2] / sum_curr[2];
+	}
+	// Computing global compensation coefficient g
+	float gR, gG, gB;
+	float sum_alphaR = 0.0, sum_alphaR2 = 0.0;
+	float sum_alphaG = 0.0, sum_alphaG2 = 0.0;
+	float sum_alphaB = 0.0, sum_alphaB2 = 0.0;
+	for (i = 0; i < n; i++)
+	{
+		sum_alphaR += alphaR[i];
+		sum_alphaR2 += alphaR[i] * alphaR[i];
+		sum_alphaG += alphaG[i];
+		sum_alphaG2 += alphaG[i] * alphaG[i];
+		sum_alphaB += alphaB[i];
+		sum_alphaB2 += alphaB[i] * alphaB[i];
+	}
+	gR = sum_alphaR / sum_alphaR2;
+	gG = sum_alphaG / sum_alphaG2;
+	gB = sum_alphaB / sum_alphaB2;*/
+	// Compensation
+	/*for (i = 0; i < n; i++)
+	{
+		CByteImage& imgi = ipv[i].img;
+		int widthi = imgi.Shape().width;
+		int heighti = imgi.Shape().height;
+		float gamma1 = 1.0/2.2;
+		for (int m = 0; m < widthi; m++)
+			for (int n = 0; n < heighti; n++)
+			{
+				imgi.Pixel(m,n,0) *= pow(gR*alphaR[i],gamma1);
+				cout << (float)imgi.Pixel(m,n,0) << endl;
+				imgi.Pixel(m,n,1) *= pow(gG*alphaG[i],gamma1);
+				imgi.Pixel(m,n,2) *= pow(gB*alphaB[i],gamma1);
+			}
+	}*/
+	//<-- Exposure Compensation
+
     // Add in all of the images
     for (i = 0; i < n; i++) 
 	{
@@ -234,10 +328,86 @@ CByteImage BlendImages(CImagePositionV& ipv, float blendWidth)
         CTransform3x3 &M = ipv[i].position;
         CTransform3x3 M_t = CTransform3x3::Translation(-min_x, -min_y) * M;
         CByteImage& img = ipv[i].img;
+		/*float gamma1 = 1.0/2.2;
+		for (int m = 0; m < img.Shape().width; m++)
+			for (int n = 0; n < img.Shape().height; n++)
+			{
+				img.Pixel(m,n,0) = floor((float)img.Pixel(m,n,0)*gR*alphaR[i]);//pow(gR*alphaR[i],gamma1));
+				//cout << (float)imgi.Pixel(m,n,0) << endl;
+				img.Pixel(m,n,1) = floor((float)img.Pixel(m,n,1)*gG*alphaG[i]);//*pow(gG*alphaG[i],gamma1));
+				img.Pixel(m,n,2) = floor((float)img.Pixel(m,n,2)*gB*alphaB[i]);//*pow(gB*alphaB[i],gamma1));
+			}
+		if (i == 0)
+			WriteFile(img, "tmp_img0.tga");
+		else if (i == 1)
+			WriteFile(img, "tmp_img1.tga");
+		else if (i == 2)
+			WriteFile(img, "tmp_img2.tga");
+		else if (i == 3)
+			WriteFile(ipv[0].img, "ref_img0.tga");*/
+		// --> Added for exposure compensation
+		/*int minX1, minY1, maxX1, maxY1;
+		int minX2, minY2, maxX2, maxY2;
+		if (i == 0)
+			ImageBoundingBox(img, M_t, minX1, minY1, maxX1, maxY1);
+		else if (i == 1)
+			ImageBoundingBox(img, M_t, minX2, minY2, maxX2, maxY2);
+		else
+		{
+			minX1 = minX2;
+			minY1 = minY2;
+			maxX1 = maxX2;
+			maxY1 = maxY2;
+			ImageBoundingBox(img, M_t, minX2, minY2, maxX2, maxY2);
+		}
+		if (i > 0 && i < n)
+		{
+			int OverlapMinX = minX2 > minX1 ? MIN(maxX1,minX2) : MIN(minX1,maxX2);
+			int OverlapMaxX = minX2 > minX1 ? MAX(maxX1,minX2) : MAX(minX1,maxX2);;
+			int OverlapMinY = MAX(minY1,minY2);
+			int OverlapMaxY = MIN(maxY1,maxY2);
+			float meandiff;
+			float accgraymean, imggraymean;
+			for (int m = OverlapMinX; m <= OverlapMaxX; m++)
+				for (int n = OverlapMinY; n <= OverlapMaxY; n++)
+				{
+					CVector3 p;
+					p[0] = m;
+					p[1] = n;
+					p[2] = 1;
+					p = M_t.Inverse()*p;
+					int mm = p[0]/p[2];
+					int nn = p[1]/p[2];
+					accgraymean += 0.2989 * (float) accumulator.Pixel(m,n,0) / 255.0 + 0.5870 * 
+						(float)accumulator.Pixel(m,n,1) / 255.0 + 0.1140 * (float) accumulator.Pixel(m,n,2) / 255.0;
+					imggraymean += 0.2989 * (float) img.Pixel(mm,nn,0) / 255.0 + 0.5870 * 
+						(float)img.Pixel(mm,nn,1) / 255.0 + 0.1140 * (float) img.Pixel(mm,nn,2) / 255.0;
+				}
+			int num = (OverlapMaxX-OverlapMinX+1)*(OverlapMaxY-OverlapMinY+1);
+			meandiff = (accgraymean - imggraymean) / (float) num;
+			for (int m = OverlapMinX; m <= OverlapMaxX; m++)
+				for (int n = OverlapMinY; n <= OverlapMaxY; n++)
+				{
+					CVector3 p;
+					p[0] = m;
+					p[1] = n;
+					p[2] = 1;
+					p = M_t.Inverse()*p;
+					int mm = p[0]/p[2];
+					int nn = p[1]/p[2];
+					//r = ((float) img.Pixel(m,n,0) + r_diff * 0.5 - 128) * f;
+					//g = ((float) img.Pixel(m,n,1) + g_diff * 0.5 - 128) * f;
+					//b = ((float) img.Pixel(m,n,2) + b_diff * 0.5 - 128) * f;
+					img.Pixel(mm,nn,0) = ((float)img.Pixel(mm,nn,0)/255.0 + meandiff * 0.2989) * 255;
+					img.Pixel(mm,nn,1) = ((float)img.Pixel(mm,nn,0)/255.0 + meandiff * 0.5870) * 255;
+					img.Pixel(mm,nn,2) = ((float)img.Pixel(mm,nn,0)/255.0 + meandiff * 0.1140) * 255;
+				}
+		}*/
+		// <-- Added for exposure compensation
 
         // Perform the accumulation
         AccumulateBlend(img, accumulator, M_t, blendWidth);
-
+		
         if (i == 0) 
 		{
             CVector3 p;
