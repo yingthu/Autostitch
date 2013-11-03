@@ -101,7 +101,6 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 	double lumaAcc = 0.0;
 	double lumaImg = 0.0;
 	int cnt = 0;
-	int prtcnt = 0;
 
 	for (int ii = min_x; ii < max_x; ii++)
 		for (int jj = min_y; jj < max_y; jj++)
@@ -125,25 +124,14 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 					flag = true;
 				if (!flag)
 				{
-					/*if (prtcnt <= 3)
-					{	
-						cout << acc.Pixel(ii,jj,0) << endl;
-						cout << acc.Pixel(ii,jj,1) << endl;
-						cout << acc.Pixel(ii,jj,2) << endl;
-						prtcnt++;
-					}*/
+					// Compute Y using RGB (RGB -> YUV)
 					lumaAcc = 0.299 * acc.Pixel(ii,jj,0) +
 							   0.587 * acc.Pixel(ii,jj,1) +
 							   0.114 * acc.Pixel(ii,jj,2);
 					lumaImg = 0.299 * img.PixelLerp(newx,newy,0) +
 							   0.587 * img.PixelLerp(newx,newy,1) +
 							   0.114 * img.PixelLerp(newx,newy,2);
-					/*if (cnt <= 3)
-					{
-						cout << "cnt: " << cnt << endl;
-						cout << "lumaAcc: " << lumaAcc << endl;
-						cout << "lumaImg: " << lumaImg << endl;
-					}*/
+					
 					if (lumaImg != 0)
 					{
 						double scale = lumaAcc / lumaImg;
@@ -156,11 +144,10 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 				}
 			}
 		}
+
 	if (cnt != 0)
 		lumaScale = lumaScale / (double)cnt;
 	else lumaScale = 1.0;
-	
-	cout << "lumaScale: " << lumaScale << endl;
 
 	// add every pixel in img to acc, feather the region withing blendwidth to the bounding box,
 	// pure black pixels (caused by warping) are not added
