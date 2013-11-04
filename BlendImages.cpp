@@ -160,18 +160,22 @@ static void AccumulateBlend(CByteImage& img, CFloatImage& acc, CTransform3x3 M, 
 			p = M.Inverse() * p;
 			newx = p[0] / p[2];
 			newy = p[1] / p[2];
-			if ((newx >= 0) && (newx < width) && (newy >= 0) && (newy < height))
+			if ((newx >= 0) && (newx < width-1) && (newy >= 0) && (newy < height-1))
 			{
 				weight = 1.0;
-				if ( (ii > min_x) && (ii < (min_x+blendWidth)) )
+				if ( (ii >= min_x) && (ii < (min_x+blendWidth)) )
 					weight = (ii-min_x) / blendWidth;
-				if ( (ii < max_x) && (ii > (max_x-blendWidth)) )
+				if ( (ii <= max_x) && (ii > (max_x-blendWidth)) )
 					weight = (max_x-ii) / blendWidth;
+				if (img.Pixel(iround(newx),iround(newy),0) == 0 &&
+					img.Pixel(iround(newx),iround(newy),1) == 0 &&
+					img.Pixel(iround(newx),iround(newy),2) == 0)
+					weight = 0.0;
+
 				double LerpR = img.PixelLerp(newx, newy, 0);
 				double LerpG = img.PixelLerp(newx, newy, 1);
 				double LerpB = img.PixelLerp(newx, newy, 2);
-				if (LerpR == 0 && LerpG == 0 && LerpB == 0)
-					weight = 0.0;
+				
 				double r = LerpR*lumaScale > 255.0 ? 255.0 : LerpR*lumaScale;
 				double g = LerpG*lumaScale > 255.0 ? 255.0 : LerpG*lumaScale;
 				double b = LerpB*lumaScale > 255.0 ? 255.0 : LerpB*lumaScale;
@@ -366,7 +370,7 @@ CByteImage BlendImages(CImagePositionV& ipv, float blendWidth)
 		A = CTransform3x3::Translation(0, 0) * AA;
 		AA[0][0]=1;AA[0][1]=0;AA[0][2]=0;
 		AA[1][0]=0;AA[1][1]=(double)height/(double)mShape.height;AA[1][2]=0;
-		cout<<(double)height/(double)mShape.height<<endl;
+		//cout<<(double)height/(double)mShape.height<<endl;
 		AA[2][0]=0;AA[2][1]=0;AA[2][2]=1;
 		A = A * AA;
 	}
