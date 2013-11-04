@@ -363,7 +363,12 @@ CByteImage BlendImages(CImagePositionV& ipv, float blendWidth)
 		AA[0][0]=1;AA[0][1]=0;AA[0][2]=0;
 		AA[1][0]=k;AA[1][1]=1;AA[1][2]=0;
 		AA[2][0]=0;AA[2][1]=0;AA[2][2]=1;
-		A = CTransform3x3::Translation(x_init, -y_init) * AA;
+		A = CTransform3x3::Translation(0, 0) * AA;
+		AA[0][0]=1;AA[0][1]=0;AA[0][2]=0;
+		AA[1][0]=0;AA[1][1]=(double)height/(double)mShape.height;AA[1][2]=0;
+		cout<<(double)height/(double)mShape.height<<endl;
+		AA[2][0]=0;AA[2][1]=0;AA[2][2]=1;
+		A = A * AA;
 	}
 
     // END TODO
